@@ -1,0 +1,14 @@
+{
+  "properties": [
+    {
+      "name": "slack.bot.channelId",
+      "type": "java.lang.String",
+      "description": "Slack bot channel Id"
+    },
+    {
+      "name": "slack.bot.token",
+      "type": "java.lang.String",
+      "description": "Slack bot application token"
+    }
+  ]
+}
