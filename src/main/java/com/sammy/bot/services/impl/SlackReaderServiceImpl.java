@@ -25,9 +25,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class SlackReaderServiceImpl implements SlackReaderService {
@@ -38,6 +36,12 @@ public class SlackReaderServiceImpl implements SlackReaderService {
     private static final String USER = "user";
     private static final String TIME_STAMP = "timestamp";
     private static final String MESSAGE = "message";
+    private static final String PAYLOAD_DELIMITER = "&";
+    private static final String KEY_VALUE_SPLITTER = "=";
+    private static final String ENCODED_QUESTION_MARK = "%3F";
+    private static final String PLUS_SIGN = "+";
+    private static final String QUESTION_MARK = "?";
+    private static final String EMPTY = " ";
 
     public SlackReaderServiceImpl(ApplicationPropertiesConfiguration configuration, SlackConfiguration slackConfiguration) {
         this.configuration = configuration;
@@ -91,7 +95,7 @@ public class SlackReaderServiceImpl implements SlackReaderService {
     }
 
     @Override
-    public String promptForSlackChannelInteractionsSummary(List<Map<String, String>> slackMessages) {
+    public String promptForSlackChannelInteractionsSummary(List<Map<String, String>> slackChatContext) {
         OpenAiChatOptions options = new OpenAiChatOptions.Builder()
                 .withModel("gpt-4o")
                 .withTemperature(0.4F)
@@ -99,8 +103,53 @@ public class SlackReaderServiceImpl implements SlackReaderService {
                 .build();
         OpenAiChatClient client = new OpenAiChatClient(configuration.openAiKey(), options);
         ChatResponse response = client.call(new Prompt("In sentence form, give a summary of this " +
-                "list of slack interactions" + slackMessages));
+                "list of slack interactions " + slackChatContext));
         return response.getResult().getOutput().getContent();
+    }
+
+    @Override
+    public String promptSlackForSlackUserQuestion(String question, List<Map<String, String>> slackChatContext) {
+        OpenAiChatOptions options = new OpenAiChatOptions.Builder()
+                .withModel("gpt-4o")
+                .withTemperature(0.4F)
+                .withMaxTokens(200)
+                .build();
+        OpenAiChatClient client = new OpenAiChatClient(configuration.openAiKey(), options);
+        ChatResponse response = client.call(new Prompt("Answer this question: '" + question + "', " +
+                "Based on this list of slack interactions " + slackChatContext));
+        return response.getResult().getOutput().getContent();
+    }
+
+    @Override
+    public Map<String, String> mapPayload(String payload) throws IOException {
+        Map<String, String> payloadMap = new HashMap<>();
+        if (payload != null) {
+            StringTokenizer tokenizer = new StringTokenizer(payload, PAYLOAD_DELIMITER);
+            Iterator<Object> iterator = tokenizer.asIterator();
+
+            while (iterator.hasNext()) {
+                String pair = (String) iterator.next();
+                String[] splitPair = pair.split(KEY_VALUE_SPLITTER);
+                if (splitPair.length == 2) {
+                    if (splitPair[0].equals("text")) {
+                        payloadMap.put(splitPair[0], decodeString(splitPair[1]));
+                    } else {
+                        payloadMap.put(splitPair[0], splitPair[1]);
+                    }
+                } else {
+                    throw new IOException("Slack command payload is not in the correct format");
+                }
+            }
+        }
+        return payloadMap;
+    }
+
+    private static String decodeString(String encodedString) {
+        String decodedString = "";
+        if (encodedString.contains(ENCODED_QUESTION_MARK)) {
+            decodedString = encodedString.replace(ENCODED_QUESTION_MARK, QUESTION_MARK);
+        }
+        return decodedString.replace(PLUS_SIGN, EMPTY);
     }
 
     private static String formatTimestamp(String ts) {

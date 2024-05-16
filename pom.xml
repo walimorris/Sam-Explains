@@ -148,6 +148,24 @@
 			<version>1.15.1</version>
 		</dependency>
 
+		<!-- Bolt dependencies -->
+		<dependency>
+			<groupId>com.slack.api</groupId>
+			<artifactId>bolt</artifactId>
+			<version>1.39.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.slack.api</groupId>
+			<artifactId>bolt-servlet</artifactId>
+			<version>1.39.2</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>4.0.1</version>
+			<scope>provided</scope>
+		</dependency>
+
 	</dependencies>
 	<dependencyManagement>
 		<dependencies>
